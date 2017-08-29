@@ -7,6 +7,8 @@ const unsigned WIDTH = 320;
 const unsigned HEIGHT = 256;
 const unsigned BYTESIZE = 2;
 
+uint8_t* allImageData[WIDTH * HEIGHT];
+
 void ConstitudePixel(uint8_t highPart, uint8_t lowPart, uint16_t& perPixel)
 {
 	perPixel = static_cast<uint16_t>(highPart);
@@ -40,13 +42,13 @@ uint16_t GetMaxDiff(uint16_t pixelArray[], uint16_t& maxValue, uint16_t& minValu
 	return maxValue - minValue + 1;
 }
 
-void GetFileLength(std::ifstream& fin)
+unsigned GetFrameCount(std::ifstream& fin)
 {
 	fin.seekg(0, std::ios::end);
 	auto len = fin.tellg();
-	std::cout << "Length" << len << std::endl;
-	std::cout << "Frame Number:" << len * 1.0 / (WIDTH * HEIGHT * 2) << std::endl;
+	auto frameCount = len * 1.0 / (WIDTH * HEIGHT * 2);
 	fin.seekg(0, std::ios::beg);
+	return frameCount;
 }
 
 void Lineartransform(const unsigned short* originalPerFramePixelArray, unsigned char* afterLineartransformPerFramePixelArray, const uint16_t minValue, const uint16_t diff)
@@ -68,12 +70,13 @@ bool LoadBinaryFIleToHostMemory(int& status)
 	std::ifstream fin(binaryFileFullName, std::fstream::binary | std::fstream::in);
 
 	auto originalPerFramePixelArray = new uint16_t[WIDTH * HEIGHT];
-	auto afterLineartransformPerFramePixelArray = new uint8_t[WIDTH * HEIGHT];
-	auto lowpartPerFramePixelArray = new uint8_t[WIDTH * HEIGHT];
-
 	if(fin.is_open())
 	{
-		GetFileLength(fin);
+		auto frameCount = GetFrameCount(fin);
+		for (auto i = 0; i < frameCount; ++i)
+		{
+			allImageData[i] = new uint8_t[WIDTH * HEIGHT];
+		}
 
 		auto row = 0;
 		auto col = 0;
@@ -95,6 +98,7 @@ bool LoadBinaryFIleToHostMemory(int& status)
 				ConstitudePixel(highPart, lowPart, perPixel);
 
 				originalPerFramePixelArray[pixelIndex] = perPixel;
+				allImageData[pixelIndex][pixelIndex] = lowPart;
 
 				ChangeRows(row, col);
 				highPart = fin.get();
@@ -102,12 +106,6 @@ bool LoadBinaryFIleToHostMemory(int& status)
 				byteIndex += 2;
 				pixelIndex++;
 			}
-
-			uint16_t maxValue;
-			uint16_t minValue;
-			auto diff = GetMaxDiff(originalPerFramePixelArray, maxValue, minValue);
-
-			Lineartransform(originalPerFramePixelArray, afterLineartransformPerFramePixelArray, minValue, diff);
 
 			std::cout << "Frame Index ==> " << std::setw(4) << frameIndex << std::endl;
 
@@ -123,16 +121,6 @@ bool LoadBinaryFIleToHostMemory(int& status)
 			delete[] originalPerFramePixelArray;
 			originalPerFramePixelArray = nullptr;
 		}
-		if (afterLineartransformPerFramePixelArray != nullptr)
-		{
-			delete[] afterLineartransformPerFramePixelArray;
-			afterLineartransformPerFramePixelArray = nullptr;
-		}
-		if(lowpartPerFramePixelArray != nullptr)
-		{
-			delete[] lowpartPerFramePixelArray;
-			lowpartPerFramePixelArray = nullptr;
-		}
 	}
 	else
 	{
@@ -141,16 +129,6 @@ bool LoadBinaryFIleToHostMemory(int& status)
 		{
 			delete[] originalPerFramePixelArray;
 			originalPerFramePixelArray = nullptr;
-		}
-		if (afterLineartransformPerFramePixelArray != nullptr)
-		{
-			delete[] afterLineartransformPerFramePixelArray;
-			afterLineartransformPerFramePixelArray = nullptr;
-		}
-		if (lowpartPerFramePixelArray != nullptr)
-		{
-			delete[] lowpartPerFramePixelArray;
-			lowpartPerFramePixelArray = nullptr;
 		}
 		system("PAUSE");
 		status = -1;
