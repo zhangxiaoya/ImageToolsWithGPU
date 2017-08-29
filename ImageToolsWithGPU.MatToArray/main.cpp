@@ -158,13 +158,3 @@ bool LoadBinaryFIleToHostMemory(int& status)
 	}
 	return false;
 }
-
-int main(int argc, char* argv[])
-{
-	int loadFileStatus;
-	if (LoadBinaryFIleToHostMemory(loadFileStatus))
-		return loadFileStatus;
-
-	system("PAUSE");
-	return 0;
-}
