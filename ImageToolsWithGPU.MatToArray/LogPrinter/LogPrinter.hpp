@@ -3,11 +3,14 @@
 #include "../Models/LogLevel.hpp"
 #include <iostream>
 #include <ctime>
+#include <sstream>
 
 class LogPrinter
 {
 public:
 	static void PrintLogs(std::string text, LogLevel logLevel);
+
+	static void PrintLogs(std::string frontText, LogLevel logLevel, int value);
 
 private:
 	static void printCurrentTime();
@@ -44,6 +47,13 @@ inline void LogPrinter::PrintLogs(std::string text, LogLevel logLevel)
 	std::cout << text << std::endl;
 }
 
+inline void LogPrinter::PrintLogs(std::string frontText, LogLevel logLevel, int value)
+{
+	std::ostringstream textStream;
+	textStream << frontText << value;
+	PrintLogs(textStream.str(), logLevel);
+}
+
 inline void LogPrinter::printCurrentTime()
 {
 	const auto bufferSize = 20;
@@ -61,3 +71,4 @@ inline void LogPrinter::printCurrentTime()
 	          currentTime->tm_sec);
 	std::cout << timeStr << " ";
 }
+

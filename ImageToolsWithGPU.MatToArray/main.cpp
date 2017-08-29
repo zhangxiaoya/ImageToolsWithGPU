@@ -135,8 +135,7 @@ bool LoadBinaryFIleToHostMemory()
 		// counting frame and init space on host and device respectly
 		logPrinter.PrintLogs("Start binary file reading ...", LogLevel::Info);
 		auto frameCount = GetFrameCount(fin);
-		auto text = "The image count in this binary file is " + frameCount;
-		logPrinter.PrintLogs(text, LogLevel::Info);
+		logPrinter.PrintLogs("The image count in this binary file is ", LogLevel::Info, frameCount);
 
 		logPrinter.PrintLogs("Start init space on host ...", LogLevel::Info);
 		auto init_space_on_host = InitSpaceOnHost(frameCount);
