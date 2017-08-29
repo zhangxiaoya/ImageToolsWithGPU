@@ -75,15 +75,19 @@ void OpenBinaryFile(std::ifstream& fin)
  */
 bool InitSpaceOnHost(unsigned frameCount)
 {
+	allImageDataOnHost = new uint8_t*[frameCount];
+
 	for (auto i = 0; i < frameCount; ++i)
 	{
-		auto cuda_error = cudaMallocHost(&allImageDataOnHost[i], WHOLESIZE);
+		auto cuda_error = cudaMallocHost(&allImageDataOnHost[i], WIDTH * HEIGHT);
 		if (cuda_error != cudaSuccess)
 		{
 			logPrinter.PrintLogs("Init space on host failed! Starting roll back ...", LogLevel::Error);
 
 			for (auto j = i - 1; j >= 0; j--)
 				cudaFreeHost(allImageDataOnHost[j]);
+			delete[] allImageDataOnHost;
+
 			logPrinter.PrintLogs("Roll back done!", Info);
 			return false;
 		}
@@ -98,15 +102,17 @@ bool InitSpaceOnHost(unsigned frameCount)
  */
 bool InitSpaceOnDevice(unsigned frameCount)
 {
+	allImageDataOnDevice = new uint8_t*[frameCount];
 	for(auto i =0; i< frameCount;++i)
 	{
-		auto cuda_error = cudaMalloc(&allImageDataOnDevice[i], WHOLESIZE);
+		auto cuda_error = cudaMalloc(&allImageDataOnDevice[i], WIDTH * HEIGHT);
 		if(cudaSuccess != cuda_error)
 		{
 			logPrinter.PrintLogs("Init space on device failed! Starting roll back ...", LogLevel::Error);
 
 			for (auto j = i - 1; j >= 0; j--)
 				cudaFree(allImageDataOnDevice[j]);
+			delete[] allImageDataOnDevice;
 			logPrinter.PrintLogs("Roll back done!", Info);
 			return false;
 		}
@@ -200,6 +206,7 @@ bool LoadBinaryFIleToHostMemory(unsigned& frameCount)
 			delete[] iterationText;
 			iterationText = nullptr;
 		}
+		fin.close();
 	}
 	else
 	{
@@ -236,6 +243,25 @@ inline bool cudaDeviceInit(int argc, const char** argv)
 	return true;
 }
 
+void freeSpaceOnHost(unsigned frameCount)
+{
+	for(auto i = 0; i< frameCount;++i)
+	{
+		cudaFreeHost(allImageDataOnHost[i]);
+	}
+	delete[] allImageDataOnHost;
+}
+
+void freeSpaceOnDevice(unsigned frameCount)
+{
+	for (auto i =0;i<frameCount;++i)
+	{
+		auto cuda_free = cudaFree(allImageDataOnDevice[i]);
+		auto delay = cuda_free;
+	}
+	delete[] allImageDataOnDevice;
+}
+
 int main(int argc, char** argv)
 {
 	if (cudaDeviceInit(argc, const_cast<const char **>(argv)))
@@ -253,6 +279,10 @@ int main(int argc, char** argv)
 				logPrinter.PrintLogs("Copy image data from host to device is failed!", LogLevel::Error);
 			}
 		}
+
+		freeSpaceOnHost(frameCount);
+
+		freeSpaceOnDevice(frameCount);
 	}
 
 	system("Pause");
