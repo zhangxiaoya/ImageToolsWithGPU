@@ -27,7 +27,7 @@ void ChangeRows(int& row, int& col)
 	}
 }
 
-uint16_t do_work(uint16_t pixelValues[], uint16_t& minVlaue, uint16_t& maxValue)
+uint16_t OpenBinaryFile(uint16_t pixelValues[], uint16_t& minVlaue, uint16_t& maxValue)
 {
 	minVlaue = pixelValues[0];
 	maxValue = 0;
@@ -75,7 +75,7 @@ int main(int argc, char* argv[])
 		uint16_t maxValue;
 		uint16_t minVlaue;
 
-		auto maxDiff = do_work(pixelArray, minVlaue, maxValue);
+		auto maxDiff = OpenBinaryFile(pixelArray, minVlaue, maxValue);
 
 		auto scale = static_cast<double>(maxDiff) / 256;
 		for (auto i = 0; i < WIDTH * HEIGHT;++i)
