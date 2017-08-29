@@ -5,11 +5,14 @@
 
 #include "cuda_runtime.h"
 #include "kernel.h"
+#include "LogPrinter/LogPrinter.hpp"
 
 const unsigned WIDTH = 320;
 const unsigned HEIGHT = 256;
 const unsigned BYTESIZE = 2;
 const unsigned WHOLESIZE = WIDTH * HEIGHT;
+
+LogPrinter logPrinter;
 
 uint8_t* allImageDataOnHost[WHOLESIZE];
 uint8_t* allImageDataOnDevice[WHOLESIZE];
@@ -107,6 +110,7 @@ bool LoadBinaryFIleToHostMemory()
 	auto originalPerFramePixelArray = new uint16_t[WIDTH * HEIGHT];
 	if(fin.is_open())
 	{
+		logPrinter.PrintLogs("Start binary file reading...", LogLevel::Info);
 		auto frameCount = GetFrameCount(fin);
 		InitSpaceOnHost(frameCount);
 		InitSpaceOnDevice(frameCount);
