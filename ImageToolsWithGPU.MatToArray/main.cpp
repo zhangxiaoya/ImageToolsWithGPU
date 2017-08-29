@@ -5,17 +5,7 @@
 
 #include "cuda_runtime.h"
 #include "kernel.h"
-#include "LogPrinter/LogPrinter.hpp"
-
-const unsigned WIDTH = 320;
-const unsigned HEIGHT = 256;
-const unsigned BYTESIZE = 2;
-const unsigned WHOLESIZE = WIDTH * HEIGHT;
-
-LogPrinter logPrinter;
-
-uint8_t* allImageDataOnHost[WHOLESIZE];
-uint8_t* allImageDataOnDevice[WHOLESIZE];
+#include "GlobalConsistantConfigure.h"
 
 void ConstitudePixel(uint8_t highPart, uint8_t lowPart, uint16_t& perPixel)
 {
@@ -124,7 +114,7 @@ bool InitSpaceOnDevice(unsigned frameCount)
 	return true;
 }
 
-bool LoadBinaryFIleToHostMemory()
+bool LoadBinaryFIleToHostMemory(unsigned& frameCount)
 {
 	// create one binary file reader
 	std::ifstream fin;
@@ -138,7 +128,7 @@ bool LoadBinaryFIleToHostMemory()
 	{
 		// counting frame and init space on host and device respectly
 		logPrinter.PrintLogs("Start binary file reading ...", LogLevel::Info);
-		auto frameCount = GetFrameCount(fin);
+		frameCount = GetFrameCount(fin);
 		logPrinter.PrintLogs("The image count in this binary file is ", LogLevel::Info, frameCount);
 
 		logPrinter.PrintLogs("Start init space on host ...", LogLevel::Info);
@@ -236,16 +226,32 @@ inline bool cudaDeviceInit(int argc, const char** argv)
 		exit(EXIT_FAILURE);
 	}
 
-	cudaSetDevice(0);
+	// Choose which GPU to run on, change this on a multi-GPU system.
+	auto cudaStatus = cudaSetDevice(0);
+	if (cudaStatus != cudaSuccess)
+	{
+		logPrinter.PrintLogs("cudaSetDevice failed!  Do you have a CUDA-capable GPU installed?", LogLevel::Error);
+		return false;
+	}
 	return true;
 }
 
 int main(int argc, char** argv)
 {
-	if(cudaDeviceInit(argc, const_cast<const char **>(argv)))
+	if (cudaDeviceInit(argc, const_cast<const char **>(argv)))
 	{
-		if (LoadBinaryFIleToHostMemory())
+		unsigned frameCount = 0;
+		if (LoadBinaryFIleToHostMemory(frameCount))
 		{
+			auto copyDataStatus = CopyDataToDevice(frameCount, allImageDataOnHost, allImageDataOnDevice, WIDTH,HEIGHT);
+			if (cudaSuccess == copyDataStatus)
+			{
+				logPrinter.PrintLogs("Copy image data from host to device success!", LogLevel::Info);
+			}
+			else
+			{
+				logPrinter.PrintLogs("Copy image data from host to device is failed!", LogLevel::Error);
+			}
 		}
 	}
 

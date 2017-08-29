@@ -21,5 +21,7 @@
     <ClInclude Include="Models\LogLevel.hpp">
       <Filter>Models</Filter>
     </ClInclude>
+    <ClInclude Include="kernel.h" />
+    <ClInclude Include="GlobalConsistantConfigure.h" />
   </ItemGroup>
 </Project>

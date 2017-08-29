@@ -1,2 +1,2 @@
 #pragma once
-cudaError_t addWithCuda(int* c, const int* a, const int* b, unsigned int size);
+cudaError_t CopyDataToDevice(unsigned frameCount, unsigned char** allImageDataOnHost, unsigned char** allImageDataOnDevice, unsigned width, unsigned height);

@@ -157,6 +157,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="GlobalConsistantConfigure.h" />
     <ClInclude Include="kernel.h" />
     <ClInclude Include="LogPrinter\LogPrinter.hpp" />
     <ClInclude Include="Models\LogLevel.hpp" />
