@@ -3,11 +3,16 @@
 #include <fstream>
 #include <iomanip>
 
+#include "cuda_runtime.h"
+#include "kernel.h"
+
 const unsigned WIDTH = 320;
 const unsigned HEIGHT = 256;
 const unsigned BYTESIZE = 2;
+const unsigned WHOLESIZE = WIDTH * HEIGHT;
 
-uint8_t* allImageData[WIDTH * HEIGHT];
+uint8_t* allImageDataOnHost[WHOLESIZE];
+uint8_t* allImageDataOnDevice[WHOLESIZE];
 
 void ConstitudePixel(uint8_t highPart, uint8_t lowPart, uint16_t& perPixel)
 {
@@ -63,20 +68,48 @@ void Lineartransform(const unsigned short* originalPerFramePixelArray, unsigned 
 	}
 }
 
-bool LoadBinaryFIleToHostMemory(int& status)
+void OpenBinaryFile(std::ifstream& fin)
 {
 	std::string binaryFileFullName = "C:\\D\\Cabins\\Projects\\Project1\\binaryFiles\\ir_file_20170531_1000m_1.bin";
 
-	std::ifstream fin(binaryFileFullName, std::fstream::binary | std::fstream::in);
+	fin = std::ifstream(binaryFileFullName, std::fstream::binary | std::fstream::in);
+}
+
+/**
+ * \brief init space on host
+ * \param frameCount count of all frame in one file
+ */
+void InitSpaceOnHost(unsigned frameCount)
+{
+	for (auto i = 0; i < frameCount; ++i)
+	{
+		cudaMallocHost(&allImageDataOnHost[i], WHOLESIZE);
+	}
+}
+
+/**
+ * \brief init space on device
+ * \param frameCount the count of all frame in one file
+ */
+void InitSpaceOnDevice(unsigned frameCount)
+{
+	for(auto i =0; i< frameCount;++i)
+	{
+		cudaMalloc(&allImageDataOnDevice[i], WHOLESIZE);
+	}
+}
+
+bool LoadBinaryFIleToHostMemory()
+{
+	std::ifstream fin;
+	OpenBinaryFile(fin);
 
 	auto originalPerFramePixelArray = new uint16_t[WIDTH * HEIGHT];
 	if(fin.is_open())
 	{
 		auto frameCount = GetFrameCount(fin);
-		for (auto i = 0; i < frameCount; ++i)
-		{
-			allImageData[i] = new uint8_t[WIDTH * HEIGHT];
-		}
+		InitSpaceOnHost(frameCount);
+		InitSpaceOnDevice(frameCount);
 
 		auto row = 0;
 		auto col = 0;
@@ -98,7 +131,7 @@ bool LoadBinaryFIleToHostMemory(int& status)
 				ConstitudePixel(highPart, lowPart, perPixel);
 
 				originalPerFramePixelArray[pixelIndex] = perPixel;
-				allImageData[pixelIndex][pixelIndex] = lowPart;
+				allImageDataOnHost[frameIndex][pixelIndex] = lowPart;
 
 				ChangeRows(row, col);
 				highPart = fin.get();
@@ -130,9 +163,34 @@ bool LoadBinaryFIleToHostMemory(int& status)
 			delete[] originalPerFramePixelArray;
 			originalPerFramePixelArray = nullptr;
 		}
-		system("PAUSE");
-		status = -1;
 		return true;
 	}
 	return false;
+}
+
+inline bool cudaDeviceInit(int argc, const char** argv)
+{
+	int deviceCount;
+	cudaGetDeviceCount(&deviceCount);
+
+	if (deviceCount == 0)
+	{
+		std::cerr << "CUDA error: no devices supporting CUDA." << std::endl;
+		exit(EXIT_FAILURE);
+	}
+
+	cudaSetDevice(0);
+	return true;
+}
+
+int main(int argc, char** argv)
+{
+	if(cudaDeviceInit(argc, const_cast<const char **>(argv)))
+	{
+		if (LoadBinaryFIleToHostMemory())
+		{
+		}
+	}
+
+	return 0;
 }
