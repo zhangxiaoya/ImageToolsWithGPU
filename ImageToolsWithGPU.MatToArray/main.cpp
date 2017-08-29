@@ -132,11 +132,11 @@ bool LoadBinaryFIleToHostMemory()
 	auto originalPerFramePixelArray = new uint16_t[WIDTH * HEIGHT];
 	if(fin.is_open())
 	{
-		/*
-		 * init space on host and device respectly
-		 */
+		// counting frame and init space on host and device respectly
 		logPrinter.PrintLogs("Start binary file reading ...", LogLevel::Info);
 		auto frameCount = GetFrameCount(fin);
+		auto text = "The image count in this binary file is " + frameCount;
+		logPrinter.PrintLogs(text, LogLevel::Info);
 
 		logPrinter.PrintLogs("Start init space on host ...", LogLevel::Info);
 		auto init_space_on_host = InitSpaceOnHost(frameCount);
@@ -205,15 +205,18 @@ bool LoadBinaryFIleToHostMemory()
 	}
 	else
 	{
+		/*
+		 * if open binary file failed!
+		 */
 		logPrinter.PrintLogs("Open binary file failed, please check file path!", LogLevel::Error);
 		if (originalPerFramePixelArray != nullptr)
 		{
 			delete[] originalPerFramePixelArray;
 			originalPerFramePixelArray = nullptr;
 		}
-		return true;
+		return false;
 	}
-	return false;
+	return true;
 }
 
 inline bool cudaDeviceInit(int argc, const char** argv)
