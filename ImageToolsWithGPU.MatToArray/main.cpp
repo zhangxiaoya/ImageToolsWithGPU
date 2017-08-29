@@ -79,27 +79,49 @@ void OpenBinaryFile(std::ifstream& fin)
 }
 
 /**
- * \brief init space on host
+ * \brief init space on host, if init space for all image frame success, then return true;
+ *        else roll back all operations and return false.
  * \param frameCount count of all frame in one file
  */
-void InitSpaceOnHost(unsigned frameCount)
+bool InitSpaceOnHost(unsigned frameCount)
 {
 	for (auto i = 0; i < frameCount; ++i)
 	{
-		cudaMallocHost(&allImageDataOnHost[i], WHOLESIZE);
+		auto cuda_error = cudaMallocHost(&allImageDataOnHost[i], WHOLESIZE);
+		if (cuda_error != cudaSuccess)
+		{
+			logPrinter.PrintLogs("Init space on host failed! Starting roll back ...", LogLevel::Error);
+
+			for (auto j = i - 1; j >= 0; j--)
+				cudaFreeHost(allImageDataOnHost[j]);
+			logPrinter.PrintLogs("Roll back done!", Info);
+			return false;
+		}
 	}
+	return true;
 }
 
 /**
- * \brief init space on device
+ * \brief init space on device, if init space for all image frame success, then return true;
+ *        else roll back all operations and return false.
  * \param frameCount the count of all frame in one file
  */
-void InitSpaceOnDevice(unsigned frameCount)
+bool InitSpaceOnDevice(unsigned frameCount)
 {
 	for(auto i =0; i< frameCount;++i)
 	{
-		cudaMalloc(&allImageDataOnDevice[i], WHOLESIZE);
+		auto cuda_error = cudaMalloc(&allImageDataOnDevice[i], WHOLESIZE);
+		if(cudaSuccess != cuda_error)
+		{
+			logPrinter.PrintLogs("Init space on device failed! Starting roll back ...", LogLevel::Error);
+
+			for (auto j = i - 1; j >= 0; j--)
+				cudaFree(allImageDataOnDevice[j]);
+			logPrinter.PrintLogs("Roll back done!", Info);
+			return false;
+		}
 	}
+	return true;
 }
 
 bool LoadBinaryFIleToHostMemory()
@@ -110,33 +132,53 @@ bool LoadBinaryFIleToHostMemory()
 	auto originalPerFramePixelArray = new uint16_t[WIDTH * HEIGHT];
 	if(fin.is_open())
 	{
-		logPrinter.PrintLogs("Start binary file reading...", LogLevel::Info);
+		/*
+		 * init space on host and device respectly
+		 */
+		logPrinter.PrintLogs("Start binary file reading ...", LogLevel::Info);
 		auto frameCount = GetFrameCount(fin);
-		InitSpaceOnHost(frameCount);
-		InitSpaceOnDevice(frameCount);
 
-		auto row = 0;
-		auto col = 0;
-		auto byteIndex = 2;
-		auto frameIndex = 0;
-		auto pixelIndex = 0;
+		logPrinter.PrintLogs("Start init space on host ...", LogLevel::Info);
+		auto init_space_on_host = InitSpaceOnHost(frameCount);
+		auto init_space_on_device = InitSpaceOnDevice(frameCount);
+		if(init_space_on_device && init_space_on_host)
+		{
+			logPrinter.PrintLogs("Init space on host and device done!", LogLevel::Info);
+		}
+		else
+		{
+			return false;
+		}
+
+		 // init some variables
+		auto row = 0;              // current row index
+		auto col = 0;              // current col index
+		auto byteIndex = 2;        // current byte index
+		auto frameIndex = 0;       // current frame index
+		auto pixelIndex = 0;       // current pixel index
 
 		uint8_t highPart = fin.get();
 		uint8_t lowPart = fin.get();
 
+		// main loop to read and load binary file per frame
 		while (true)
 		{
+			// check if is the end of binary file
 			if (!fin)
 				break;
 
+			// per frame
 			while (byteIndex - 2 < WIDTH * HEIGHT * BYTESIZE)
 			{
+				// take 16-bit space per pixel
 				uint16_t perPixel;
 				ConstitudePixel(highPart, lowPart, perPixel);
 
+				// but we only need only low part of one pixel (temparory)
 				originalPerFramePixelArray[pixelIndex] = perPixel;
 				allImageDataOnHost[frameIndex][pixelIndex] = lowPart;
 
+				// update these variables
 				ChangeRows(row, col);
 				highPart = fin.get();
 				lowPart = fin.get();
@@ -146,6 +188,7 @@ bool LoadBinaryFIleToHostMemory()
 
 			std::cout << "Frame Index ==> " << std::setw(4) << frameIndex << std::endl;
 
+			// prepare for next frame
 			frameIndex++;
 			row = 0;
 			col = 0;
@@ -153,6 +196,7 @@ bool LoadBinaryFIleToHostMemory()
 			pixelIndex = 0;
 		}
 
+		// clean up temparory array
 		if (originalPerFramePixelArray != nullptr)
 		{
 			delete[] originalPerFramePixelArray;
@@ -161,7 +205,7 @@ bool LoadBinaryFIleToHostMemory()
 	}
 	else
 	{
-		std::cout << "Open binary file failed, please check file path!"<<std::endl;
+		logPrinter.PrintLogs("Open binary file failed, please check file path!", LogLevel::Error);
 		if (originalPerFramePixelArray != nullptr)
 		{
 			delete[] originalPerFramePixelArray;
