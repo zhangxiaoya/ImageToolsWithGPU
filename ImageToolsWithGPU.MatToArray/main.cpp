@@ -126,10 +126,14 @@ bool InitSpaceOnDevice(unsigned frameCount)
 
 bool LoadBinaryFIleToHostMemory()
 {
+	// create one binary file reader
 	std::ifstream fin;
 	OpenBinaryFile(fin);
 
+	// temparory array
 	auto originalPerFramePixelArray = new uint16_t[WIDTH * HEIGHT];
+	auto iterationText = new char[200];
+
 	if(fin.is_open())
 	{
 		// counting frame and init space on host and device respectly
@@ -184,8 +188,8 @@ bool LoadBinaryFIleToHostMemory()
 				byteIndex += 2;
 				pixelIndex++;
 			}
-
-			std::cout << "Frame Index ==> " << std::setw(4) << frameIndex << std::endl;
+			sprintf_s(iterationText, 200, "Current frame index is %04d", frameIndex);
+			logPrinter.PrintLogs(iterationText, LogLevel::Info);
 
 			// prepare for next frame
 			frameIndex++;
@@ -201,12 +205,15 @@ bool LoadBinaryFIleToHostMemory()
 			delete[] originalPerFramePixelArray;
 			originalPerFramePixelArray = nullptr;
 		}
+		if(iterationText != nullptr)
+		{
+			delete[] iterationText;
+			iterationText = nullptr;
+		}
 	}
 	else
 	{
-		/*
-		 * if open binary file failed!
-		 */
+		// if open binary file failed!
 		logPrinter.PrintLogs("Open binary file failed, please check file path!", LogLevel::Error);
 		if (originalPerFramePixelArray != nullptr)
 		{
@@ -225,7 +232,7 @@ inline bool cudaDeviceInit(int argc, const char** argv)
 
 	if (deviceCount == 0)
 	{
-		std::cerr << "CUDA error: no devices supporting CUDA." << std::endl;
+		logPrinter.PrintLogs("CUDA error: no devices supporting CUDA.", LogLevel::Error);
 		exit(EXIT_FAILURE);
 	}
 
@@ -242,5 +249,6 @@ int main(int argc, char** argv)
 		}
 	}
 
+	system("Pause");
 	return 0;
 }
